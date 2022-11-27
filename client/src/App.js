@@ -11,8 +11,6 @@ import { format } from "timeago.js"
 function App() {
 
   const [viewport, setViewport] = useState({
-    width: "100vw",
-    height: "100vh",
     latitude: 48.8584,
     longitude: 2.2945,
     zoom: 4,
@@ -21,6 +19,7 @@ function App() {
 
   const currentUser = "Harry";
   const [pins, setPins] = useState([]);
+  const [newPlace, setNewPlace] = useState(null);
   const [currentPlaceId, setCurrentPlaceId] = useState(null);
   console.log(pins);
 
@@ -39,9 +38,23 @@ function App() {
     getPins();
   }, [])
 
-  const handleMarkerClick = (id) => {
+  const handleMarkerClick = (id, lat, long) => {
     setCurrentPlaceId(id);
+    setViewport({ ...viewport, latitude: lat, longitude: long })
   }
+
+  const handleAddLocation = (e) => {
+    console.log(e);
+    const longLat = e.lngLat;
+    const long = longLat.lng;
+    const lat = longLat.lat;
+    console.log(long);
+    console.log(lat);
+    setNewPlace({
+      long, lat
+    });
+    console.log(newPlace);
+  };
 
   return (
     // <ReactMapGL
@@ -51,16 +64,18 @@ function App() {
     // />
     <Map
       mapboxAccessToken={process.env.REACT_APP_MAPBOX}
-      onViewStateChange={(nextViewport) => setViewport(nextViewport)}
       style={{ width: "100vw", height: "100vh" }}
+      // width="100%" height="100%"
       mapStyle="mapbox://styles/mapbox/streets-v9"
+      doubleClickZoom={false}
+      onDblClick={handleAddLocation}
+      transitionDuration="200"
     >
-
-      {pins.map(p => (
+      {pins.map((p) => (
         <>
           <Marker longitude={p.long} latitude={p.lat} anchor="bottom" offsetLeft={-20} offsetTop={-10}>
-            <RoomIcon style={{ fontSize: viewport.zoom * 7, color: p.username === currentUser ? "orangered" : "blueviolet" }}
-              onClick={() => handleMarkerClick(p._id)} />
+            <RoomIcon style={{ fontSize: viewport.zoom * 7, color: p.username === currentUser ? "orangered" : "blueviolet", cursor: "pointer" }}
+              onClick={() => handleMarkerClick(p._id, p.lat, p.long)} />
           </Marker>
           {p._id === currentPlaceId && (
             <Popup longitude={p.long} latitude={p.lat}
@@ -70,11 +85,11 @@ function App() {
               onClose={() => setCurrentPlaceId(null)}
             >
               <div className="card">
-                <label>Place</label>
+                <label className="card-label">Place</label>
                 <h4 className="place">{p.title}</h4>
-                <label>Review</label>
+                <label className="card-label">Review</label>
                 <p className="desc">{p.desc}</p>
-                <label>Rating</label>
+                <label className="card-label">Rating</label>
                 <div className="stars">
                   <Star className="star" />
                   <Star className="star" />
@@ -82,7 +97,7 @@ function App() {
                   <Star className="star" />
                   <Star className="star" />
                 </div>
-                <label>Information</label>
+                <label className="card-label">Information</label>
                 <span className="username">Created by <b>{p.username} </b></span>
                 <span className="date">{format(p.createdAt)}</span>
               </div>
@@ -90,6 +105,32 @@ function App() {
           )}
         </>
       ))}
+      {newPlace && (
+        <Popup longitude={newPlace.long} latitude={newPlace.lat}
+          anchor="left"
+          closeButton={true}
+          closeOnClick={false}
+          onClose={() => setCurrentPlaceId(null)}
+        >
+          <div>
+            <form>
+              <label className="form-label">Title</label>
+              <input placeholder="Enter a title" />
+              <label className="form-label">Review</label>
+              <textarea placeholder="Add Review about this place" />
+              <label className="form-label">Rating</label>
+              <select>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+              <button type="submit" className="submitButton">Add Pin</button>
+            </form>
+          </div>
+        </Popup>
+      )}
     </Map>
   );
 }
