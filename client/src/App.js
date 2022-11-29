@@ -1,95 +1,82 @@
 import * as React from "react";
-// import ReactMapGL from "react-map-gl";
-import Map, { Marker, Popup } from "react-map-gl";
-import RoomIcon from "@material-ui/icons/Room";
-import Star from "@material-ui/icons/Star";
+import Map from "react-map-gl";
 import './app.css';
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { format } from "timeago.js"
+import SignUp from "./Components/SignUp";
+import SignIn from "./Components/SignIn";
+import Pin from "./Components/Pin";
+import NewPlace from "./Components/NewPlace";
 
 function App() {
 
   const [viewport, setViewport] = useState({
-    width: "100vw",
-    height: "100vh",
     latitude: 48.8584,
     longitude: 2.2945,
     zoom: 4,
   });
-  // const [showPopup, setShowPopup] = React.useState(true);
 
-  const currentUser = "Harry";
+  const myStorage = window.localStorage;
+  const [currentUser, setCurrentUser] = useState(myStorage.getItem("user"));
   const [pins, setPins] = useState([]);
-  const [currentPlaceId, setCurrentPlaceId] = useState(null);
-  console.log(pins);
+  const [newPlace, setNewPlace] = useState(null);
+  const [showSignUp, setShowSignUp] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
 
   useEffect(() => {
     const getPins = async () => {
-
       try {
         const res = await axios.get('/pins');
-        console.log(res);
         setPins(res.data);
       }
       catch (err) {
-        console.log(err);
       }
     }
     getPins();
   }, [])
 
-  const handleMarkerClick = (id) => {
-    setCurrentPlaceId(id);
+  const handleAddLocation = (e) => {
+    const longLat = e.lngLat;
+    const long = longLat.lng;
+    const lat = longLat.lat;
+    setNewPlace({
+      long, lat
+    });
+  };
+
+  const handleLogout = () => {
+    myStorage.removeItem("user");
+    setCurrentUser(null);
   }
 
   return (
-    // <ReactMapGL
-    //   {...viewport}
-    //   mapboxAccessToken={process.env.REACT_APP_MAPBOX}
-    //   onViewportChange={(nextViewport) => setViewport(nextViewport)}
-    // />
     <Map
       mapboxAccessToken={process.env.REACT_APP_MAPBOX}
-      onViewStateChange={(nextViewport) => setViewport(nextViewport)}
       style={{ width: "100vw", height: "100vh" }}
       mapStyle="mapbox://styles/mapbox/streets-v9"
+      doubleClickZoom={false}
+      onDblClick={currentUser && handleAddLocation}
+      transitionDuration="200"
     >
-
-      {pins.map(p => (
-        <>
-          <Marker longitude={p.long} latitude={p.lat} anchor="bottom" offsetLeft={-20} offsetTop={-10}>
-            <RoomIcon style={{ fontSize: viewport.zoom * 7, color: p.username === currentUser ? "orangered" : "blueviolet" }}
-              onClick={() => handleMarkerClick(p._id)} />
-          </Marker>
-          {p._id === currentPlaceId && (
-            <Popup longitude={p.long} latitude={p.lat}
-              anchor="left"
-              closeButton={true}
-              closeOnClick={false}
-              onClose={() => setCurrentPlaceId(null)}
-            >
-              <div className="card">
-                <label>Place</label>
-                <h4 className="place">{p.title}</h4>
-                <label>Review</label>
-                <p className="desc">{p.desc}</p>
-                <label>Rating</label>
-                <div className="stars">
-                  <Star className="star" />
-                  <Star className="star" />
-                  <Star className="star" />
-                  <Star className="star" />
-                  <Star className="star" />
-                </div>
-                <label>Information</label>
-                <span className="username">Created by <b>{p.username} </b></span>
-                <span className="date">{format(p.createdAt)}</span>
-              </div>
-            </Popup>
-          )}
-        </>
+      {pins.map((p) => (
+        <Pin key={p._id} p={p} viewport={viewport} setViewport={setViewport} currentUser={currentUser} />
       ))}
+
+      {newPlace && (
+        <NewPlace setNewPlace={setNewPlace} newPlace={newPlace} pins={pins} setPins={setPins} currentUser={currentUser} />
+      )};
+
+      {currentUser ? (
+        <button className="button logout" onClick={handleLogout}>Sign Out</button>
+      ) : (
+        <div className="buttons">
+          <button className="button login" onClick={() => setShowSignIn(true)}>Sign In</button>
+          <button className="button register" onClick={() => setShowSignUp(true)}>Sign Up</button>
+        </div>
+      )}
+
+      {showSignIn && <SignIn setShowSignIn={setShowSignIn} myStorage={myStorage} setCurrentUser={setCurrentUser} />}
+      {showSignUp && <SignUp setShowSignUp={setShowSignUp} />}
     </Map>
   );
 }
